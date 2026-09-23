@@ -25,6 +25,14 @@ locals {
   http_listener_name  = "${local.name_prefix}-http-listener"
   https_listener_name = "${local.name_prefix}-https-listener"
 
+  container_health_check_command = coalesce(
+  var.container_health_check_command,
+  [
+    "CMD-SHELL",
+    "curl -f http://localhost:${var.container_port}/health || exit 1"
+  ]
+)
+
   container_environment = [
     for key, value in var.container_environment : {
       name  = key

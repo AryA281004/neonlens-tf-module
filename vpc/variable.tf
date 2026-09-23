@@ -42,9 +42,6 @@ variable "vpc_name" {
 # ============================================================
 # PUBLIC SUBNETS
 # ============================================================
-# One NAT Gateway is created per public subnet defined here, so
-# every key you add becomes a valid `nat_gateway_key` target for a
-# private subnet below (this is what gives you per-AZ NAT).
 
 variable "public_subnet_cidr" {
   description = "Map of public subnet CIDRs and Availability Zones"
@@ -66,12 +63,12 @@ variable "public_subnet_cidr" {
 # ============================================================
 
 variable "private_subnet_cidr" {
-  description = "Map of private subnet CIDRs, Availability Zones, and which public-subnet's NAT Gateway they route through"
+  description = "Map of private subnet CIDRs, Availability Zones, and NAT Gateway mappings"
 
   type = map(object({
     cidr_block      = string
     az              = string
-    nat_gateway_key = string # must match a key in var.public_subnet_cidr
+    nat_gateway_key = string
   }))
 
   validation {
@@ -81,21 +78,14 @@ variable "private_subnet_cidr" {
 
   validation {
     condition = alltrue([
-      for s in var.private_subnet_cidr : contains(keys(var.public_subnet_cidr), s.nat_gateway_key)
+      for subnet in var.private_subnet_cidr :
+      contains(keys(var.public_subnet_cidr), subnet.nat_gateway_key)
     ])
-    error_message = "Every private subnet's nat_gateway_key must match a key defined in var.public_subnet_cidr."
+
+    error_message = "Every private subnet's nat_gateway_key must match a key defined in public_subnet_cidr."
   }
 }
 
-variable "nat_gateway_subnet_key" {
-  description = "Key of the public subnet to place the NAT Gateway in (must match a key in var.public_subnet_cidr)"
-  type        = string
-
-  validation {
-    condition     = contains(keys(var.public_subnet_cidr), var.nat_gateway_subnet_key)
-    error_message = "nat_gateway_subnet_key must match a key defined in var.public_subnet_cidr."
-  }
-}
 
 # ============================================================
 # SECURITY GROUPS

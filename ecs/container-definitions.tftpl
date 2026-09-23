@@ -1,0 +1,38 @@
+[
+  {
+    "name": "${container_name}",
+    "image": "${container_image}",
+    "essential": ${essential},
+
+    "cpu": ${container_cpu},
+    "memory": ${container_memory},
+
+    "portMappings": [
+      {
+        "name": "${port_name}",
+        "containerPort": ${container_port},
+        "hostPort": ${container_port},
+        "protocol": "tcp"
+      }
+    ],
+
+    "environment": ${container_environment},
+
+    "secrets": ${container_secrets},
+
+    "healthCheck": ${health_check},
+
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "${log_group_name}",
+        "awslogs-region": "${aws_region}",
+        "awslogs-stream-prefix": "${log_stream_prefix}"
+      }
+    },
+
+    "readonlyRootFilesystem": ${readonly_root_filesystem},
+
+    "stopTimeout": ${container_stop_timeout}
+  }
+]

@@ -21,8 +21,8 @@ resource "aws_cloudwatch_metric_alarm" "alarm_5xx_neonlens" {
   metric_name = "HTTPCode_Target_5XX_Count"
 
   dimensions = {
-    LoadBalancer = "${aws_lb.neonlens.arn_suffix}"
-    TargetGroup  = "${aws_lb_target_group.neonlens.arn_suffix}"
+    LoadBalancer = var.load_balancer_arn_suffix
+    TargetGroup  = var.target_group_arn_suffix
   }
 
   period = var.period

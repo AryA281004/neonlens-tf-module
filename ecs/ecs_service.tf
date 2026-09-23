@@ -40,7 +40,7 @@ resource "aws_ecs_service" "neonlens" {
   }
 
   load_balancer {
-    target_group_arn = "${aws_lb_target_group.neonlens.arn}"
+    target_group_arn = var.target_group_arn
     container_name   = local.container_name
     container_port   = var.container_port
   }
@@ -52,8 +52,6 @@ resource "aws_ecs_service" "neonlens" {
   }
 
   depends_on = [
-    aws_lb_listener.http,
-    aws_lb_listener.https,
     aws_iam_role_policy_attachment.execution,
     aws_iam_role_policy.execution_secrets
   ]

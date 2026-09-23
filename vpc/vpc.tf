@@ -4,8 +4,8 @@
 
 locals {
   common_tags = {
-    Environment = "${var.environment}"
-    Project     = "${var.vpc_name}"
+    Environment = var.environment
+    Project     = var.vpc_name
     ManagedBy   = "Terraform"
   }
 }
@@ -27,9 +27,8 @@ resource "aws_vpc" "neonlens" {
 
 
 # ============================================================
-# DEFAULT SECURITY GROUP (locked down — CIS AWS benchmark)
+# DEFAULT SECURITY GROUP
 # ============================================================
-
 
 resource "aws_default_security_group" "default" {
   vpc_id = aws_vpc.neonlens.id
@@ -130,63 +129,72 @@ resource "aws_route" "public_route" {
 
 
 # ============================================================
-# NAT GATEWAY EIPs — one per public subnet (per AZ)
-# ============================================================
-
-# ============================================================
-# NAT GATEWAY EIP
+# NAT GATEWAY EIPs
+# One EIP per public subnet / AZ
 # ============================================================
 
 resource "aws_eip" "nat_eip" {
+  for_each = aws_subnet.public
+
   domain = "vpc"
 
   tags = merge(local.common_tags, {
-    Name = "${var.environment}-${var.vpc_name}-nat-eip"
+    Name = "${var.environment}-${var.vpc_name}-${each.key}-nat-eip"
   })
 }
 
 
 # ============================================================
-# NAT GATEWAYS — one per public subnet (per AZ)
+# NAT GATEWAYS
+# One NAT Gateway per public subnet / AZ
 # ============================================================
 
 resource "aws_nat_gateway" "nat_gw" {
-  allocation_id = aws_eip.nat_eip.id
+  for_each = aws_subnet.public
 
-  subnet_id = aws_subnet.public[
-    var.nat_gateway_subnet_key
-  ].id
+  allocation_id = aws_eip.nat_eip[each.key].id
+  subnet_id     = each.value.id
 
-  depends_on = [aws_internet_gateway.public_igw]
+  depends_on = [
+    aws_internet_gateway.public_igw
+  ]
 
   tags = merge(local.common_tags, {
-    Name = "${var.environment}-${var.vpc_name}-nat-gw"
+    Name = "${var.environment}-${var.vpc_name}-${each.key}-nat-gw"
   })
 }
 
 
-
 # ============================================================
-# PRIVATE ROUTE TABLE
+# PRIVATE ROUTE TABLES
+# One route table per private subnet / AZ
 # ============================================================
 
 resource "aws_route_table" "private_rt" {
+  for_each = aws_subnet.private
+
   vpc_id = aws_vpc.neonlens.id
 
   tags = merge(local.common_tags, {
-    Name = "${var.environment}-${var.vpc_name}-private-rt"
+    Name = "${var.environment}-${var.vpc_name}-${each.key}-private-rt"
   })
 }
 
 
 # ============================================================
-# PRIVATE ROUTE → NAT GATEWAY
+# PRIVATE ROUTES → NAT GATEWAY
+# Each private subnet uses its configured NAT Gateway
 # ============================================================
 
 resource "aws_route" "private_route" {
-  route_table_id         = aws_route_table.private_rt.id
+  for_each = aws_subnet.private
+
+  route_table_id         = aws_route_table.private_rt[each.key].id
   destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = aws_nat_gateway.nat_gw.id
+
+  nat_gateway_id = aws_nat_gateway.nat_gw[
+    var.private_subnet_cidr[each.key].nat_gateway_key
+  ].id
 }
 
 
@@ -198,5 +206,5 @@ resource "aws_route_table_association" "private_rt_assoc" {
   for_each = aws_subnet.private
 
   subnet_id      = each.value.id
-  route_table_id = aws_route_table.private_rt.id
+  route_table_id = aws_route_table.private_rt[each.key].id
 }

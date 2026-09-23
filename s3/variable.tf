@@ -28,12 +28,20 @@ variable "name" {
 # ============================================================
 
 variable "bucket_name" {
-  description = "Globally unique S3 bucket name."
+  description = "Globally unique S3 bucket name. If null, Terraform generates one using environment, name, and AWS account ID."
   type        = string
+  default     = null
 
   validation {
-    condition     = can(regex("^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$", var.bucket_name))
-    error_message = "bucket_name must be a valid S3 bucket name."
+    condition = (
+      var.bucket_name == null ||
+      can(regex(
+        "^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$",
+        var.bucket_name
+      ))
+    )
+
+    error_message = "bucket_name must be null or a valid S3 bucket name."
   }
 }
 

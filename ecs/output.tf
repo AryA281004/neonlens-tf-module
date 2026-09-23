@@ -106,10 +106,10 @@ output "autoscaling_target_arn" {
 
 output "alb_url" {
   description = "HTTP endpoint for the Application Load Balancer."
-  value       = "http://${aws_lb.this.dns_name}"
+  value       = "http://${aws_lb.neonlens.dns_name}"
 }
 
 output "https_url" {
   description = "HTTPS endpoint for the Application Load Balancer."
-  value       = var.enable_https_listener ? "https://${aws_lb.this.dns_name}" : null
+  value       = var.enable_https_listener ? "https://${aws_lb.neonlens.dns_name}" : null
 }

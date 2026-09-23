@@ -92,7 +92,7 @@ variable "enable_https_listener" {
 variable "container_port" {
   description = "Port exposed by the application container."
   type        = number
-  default     = 8000
+  
 
   validation {
     condition     = var.container_port >= 1 && var.container_port <= 65535
@@ -164,13 +164,9 @@ variable "enable_container_health_check" {
 }
 
 variable "container_health_check_command" {
-  description = "ECS container health check command."
+  description = "ECS container health check command. If null, a health check using container_port is generated."
   type        = list(string)
-
-  default = [
-    "CMD-SHELL",
-    "curl -f http://localhost:8000/health || exit 1"
-  ]
+  default     = null
 }
 
 variable "container_health_check_interval" {
@@ -409,4 +405,9 @@ variable "scale_out_cooldown" {
   description = "Scale-out cooldown in seconds."
   type        = number
   default     = 60
+}
+
+variable "target_group_arn" {
+  description = "ARN of the ALB target group."
+  type        = string
 }
