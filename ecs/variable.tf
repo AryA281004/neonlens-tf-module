@@ -411,3 +411,8 @@ variable "target_group_arn" {
   description = "ARN of the ALB target group."
   type        = string
 }
+
+variable "alb_dns_name" {
+  description = "DNS name of the ALB, passed in from the alb module."
+  type        = string
+}
