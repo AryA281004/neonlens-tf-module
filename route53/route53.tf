@@ -1,14 +1,4 @@
 # ============================================================
-# HOSTED ZONE
-# ============================================================
-
-data "aws_route53_zone" "neonlens" {
-  name         = var.domain_name
-  private_zone = false
-}
-
-
-# ============================================================
 # ALB DNS RECORD
 # ============================================================
 
@@ -31,9 +21,9 @@ resource "aws_route53_record" "neonlens" {
     for_each = each.value.alias == null ? [] : [each.value.alias]
 
     content {
-      name                   = "${alias.value.dns_name}"
-      zone_id                = "${alias.value.zone_id}"
-      evaluate_target_health = "${alias.value.evaluate_target_health}"
+      name                   = each.value.alias.dns_name
+      zone_id                = each.value.alias.zone_id
+      evaluate_target_health = each.value.alias.evaluate_target_health
     }
   }
 
