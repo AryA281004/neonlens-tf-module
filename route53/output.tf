@@ -7,6 +7,11 @@ output "hosted_zone_id" {
   value       = var.zone_id
 }
 
+output "hosted_zone_name" {
+  description = "Route 53 hosted zone name."
+  value       = var.domain_name
+}
+
 
 # ============================================================
 # DNS RECORDS

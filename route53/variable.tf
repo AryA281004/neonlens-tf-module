@@ -1,3 +1,13 @@
+variable "domain_name" {
+  description = "Route 53 hosted zone domain name."
+  type        = string
+
+  validation {
+    condition     = length(trimspace(var.domain_name)) > 0
+    error_message = "domain_name must not be empty."
+  }
+}
+
 # ============================================================
 # ENVIRONMENT
 # ============================================================
