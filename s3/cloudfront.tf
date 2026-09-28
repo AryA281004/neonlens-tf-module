@@ -17,7 +17,7 @@ resource "aws_cloudfront_origin_access_control" "neonlens" {
 
 resource "aws_cloudfront_distribution" "neonlens" {
   enabled             = true
-  is_ipv6_enabled     = true
+  is_ipv6_enabled     = false
   comment             = "${var.environment}-${var.name} CloudFront distribution"
   default_root_object = var.default_root_object
   price_class         = var.price_class
