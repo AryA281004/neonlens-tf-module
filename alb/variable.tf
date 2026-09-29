@@ -81,7 +81,7 @@ variable "alb_ssl_policy" {
 variable "container_port" {
   description = "Port exposed by the application container."
   type        = number
-  default     = 8000
+  default     = 3000
 
   validation {
     condition     = var.container_port >= 1 && var.container_port <= 65535
