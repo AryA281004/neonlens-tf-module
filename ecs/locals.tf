@@ -29,7 +29,7 @@ locals {
   var.container_health_check_command,
   [
     "CMD-SHELL",
-    "curl -f http://localhost:${var.container_port}/health || exit 1"
+    "curl -f http://localhost:${var.container_port}/login || exit 1"
   ]
 )
 

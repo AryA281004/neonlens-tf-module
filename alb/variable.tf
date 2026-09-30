@@ -103,7 +103,7 @@ variable "target_group_protocol" {
 variable "health_check_path" {
   description = "ALB health check path."
   type        = string
-  default     = "/health"
+  default     = "/login"
 }
 
 variable "health_check_protocol" {
