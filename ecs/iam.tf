@@ -40,7 +40,7 @@ resource "aws_iam_role_policy_attachment" "execution" {
 # ============================================================
 
 resource "aws_iam_role_policy" "execution_secrets" {
-  count = length(var.execution_secret_arns) > 0 ? 1 : 0
+  count = length(var.container_secrets) > 0 ? 1 : 0
 
   name = "${local.name_prefix}-execution-secrets"
 
