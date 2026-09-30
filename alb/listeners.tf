@@ -65,3 +65,27 @@ resource "aws_lb_listener" "https" {
 
   tags = local.common_tags
 }
+
+# ============================================================
+# HTTPS HOST HEADER ROUTING
+# ============================================================
+
+resource "aws_lb_listener_rule" "host_header" {
+  count = var.enable_https_listener && length(var.host_header_values) > 0 ? 1 : 0
+
+  listener_arn = aws_lb_listener.https[0].arn
+  priority     = 100
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.neonlens.arn
+  }
+
+  condition {
+    host_header {
+      values = var.host_header_values
+    }
+  }
+
+  tags = local.common_tags
+}

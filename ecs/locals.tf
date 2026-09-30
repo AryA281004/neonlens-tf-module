@@ -29,7 +29,7 @@ locals {
   var.container_health_check_command,
   [
     "CMD-SHELL",
-    "curl -f http://localhost:${var.container_port}/login || exit 1"
+    "node -e \"require('http').get('http://localhost:3000',r=>process.exit(r.statusCode<400?0:1)).on('error',()=>process.exit(1))\""
   ]
 )
 

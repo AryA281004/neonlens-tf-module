@@ -103,7 +103,7 @@ variable "target_group_protocol" {
 variable "health_check_path" {
   description = "ALB health check path."
   type        = string
-  default     = "/login"
+  default     = "/"
 }
 
 variable "health_check_protocol" {
@@ -151,4 +151,10 @@ variable "deregistration_delay" {
   description = "ALB target deregistration delay."
   type        = number
   default     = 30
+}
+
+variable "host_header_values" {
+  description = "List of host header values to match."
+  type        = list(string)
+  default     = []
 }
