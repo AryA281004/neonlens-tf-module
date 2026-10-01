@@ -23,7 +23,7 @@ resource "aws_sns_topic_subscription" "email" {
     var.notification_email != null
   ) ? 1 : 0
 
-  topic_arn = "${aws_sns_topic.s3_alerts[0].arn}"
+  topic_arn = aws_sns_topic.s3_alerts[0].arn
 
   protocol = "email"
   endpoint = var.notification_email

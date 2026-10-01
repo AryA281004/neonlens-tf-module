@@ -92,7 +92,7 @@ variable "enable_https_listener" {
 variable "container_port" {
   description = "Port exposed by the application container."
   type        = number
-  
+
 
   validation {
     condition     = var.container_port >= 1 && var.container_port <= 65535

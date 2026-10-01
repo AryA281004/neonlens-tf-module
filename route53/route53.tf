@@ -32,7 +32,7 @@ resource "aws_route53_record" "neonlens" {
       condition = each.value.alias == null ? (
         each.value.ttl != null &&
         length(each.value.records) > 0
-      ) : (
+        ) : (
         each.value.ttl == null &&
         length(each.value.records) == 0
       )

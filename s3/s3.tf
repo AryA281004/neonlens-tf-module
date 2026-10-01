@@ -20,7 +20,7 @@ locals {
   )
 
   bucket_name = coalesce(
-    var.bucket_name,"${var.environment}-${var.name}-frontend-${data.aws_caller_identity.current.account_id}"
+    var.bucket_name, "${var.environment}-${var.name}-frontend-${data.aws_caller_identity.current.account_id}"
   )
 }
 
@@ -29,7 +29,7 @@ locals {
 # ============================================================
 
 resource "aws_s3_bucket" "neonlens" {
-  bucket = local.bucket_name
+  bucket        = local.bucket_name
   force_destroy = var.force_destroy
 
   tags = merge(local.common_tags, {

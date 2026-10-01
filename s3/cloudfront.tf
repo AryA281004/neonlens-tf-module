@@ -84,7 +84,7 @@ resource "aws_cloudfront_distribution" "neonlens" {
     cloudfront_default_certificate = var.acm_certificate_arn == null
 
     acm_certificate_arn      = var.acm_certificate_arn
-    ssl_support_method      = var.acm_certificate_arn != null ? "sni-only" : null
+    ssl_support_method       = var.acm_certificate_arn != null ? "sni-only" : null
     minimum_protocol_version = var.acm_certificate_arn != null ? var.minimum_protocol_version : null
   }
 

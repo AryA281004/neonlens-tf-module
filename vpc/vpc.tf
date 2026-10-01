@@ -124,7 +124,7 @@ resource "aws_internet_gateway" "public_igw" {
 resource "aws_route" "public_route" {
   route_table_id         = aws_route_table.public_rt.id
   destination_cidr_block = "0.0.0.0/0"
-  gateway_id              = aws_internet_gateway.public_igw.id
+  gateway_id             = aws_internet_gateway.public_igw.id
 }
 
 
