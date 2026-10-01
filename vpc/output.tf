@@ -3,7 +3,7 @@
 # ============================================================
 
 output "vpc_id" {
-  description = "The ID of the VPC"
+  description = "The ID of created VPC"
   value       = aws_vpc.neonlens.id
 }
 
