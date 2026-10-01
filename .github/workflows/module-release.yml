@@ -1,0 +1,364 @@
+name: Terraform Module Smart Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: terraform-module-release
+  cancel-in-progress: false
+
+env:
+  TF_VERSION: "1.9.0"
+  # Used only when no vX.Y.Z tag exists yet
+  INITIAL_VERSION: "v1.0.0"
+
+jobs:
+  release:
+    name: Validate and Smart Release
+    runs-on: ubuntu-latest
+    # workflow_dispatch can be fired from any branch; only ever release from main
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      # ============================================================
+      # 1. CHECKOUT (full history + tags)
+      # ============================================================
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      # ============================================================
+      # 2. SETUP TERRAFORM
+      # ============================================================
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      # ============================================================
+      # 3. FORMAT CHECK
+      # ============================================================
+      - name: Check Terraform formatting
+        run: terraform fmt -check -recursive
+
+      # ============================================================
+      # 4. DISCOVER MODULES
+      # A module = non-hidden top-level dir containing *.tf / *.tf.json
+      # ============================================================
+      - name: Discover Terraform modules
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          : > "$RUNNER_TEMP/modules.txt"
+
+          while IFS= read -r dir; do
+            hits=$(find "$dir" -maxdepth 1 -type f \
+              \( -name '*.tf' -o -name '*.tf.json' \) | head -n 1)
+            if [ -n "$hits" ]; then
+              echo "$dir" >> "$RUNNER_TEMP/modules.txt"
+            fi
+          done < <(find . -mindepth 1 -maxdepth 1 -type d ! -name '.*' -printf '%f\n' | sort)
+
+          if [ ! -s "$RUNNER_TEMP/modules.txt" ]; then
+            echo "::error::No Terraform modules found."
+            exit 1
+          fi
+
+          echo "Discovered modules:"
+          sed 's/^/  - /' "$RUNNER_TEMP/modules.txt"
+
+      # ============================================================
+      # 5. VALIDATE EVERY MODULE
+      # ============================================================
+      - name: Validate Terraform modules
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          while IFS= read -r module; do
+            echo "::group::Validating $module"
+            terraform -chdir="$module" init -backend=false -input=false -no-color
+            terraform -chdir="$module" validate -no-color
+            echo "::endgroup::"
+          done < "$RUNNER_TEMP/modules.txt"
+
+      # ============================================================
+      # 6. FIND LATEST RELEASE TAG (strict vX.Y.Z only, no -rc etc.)
+      # ============================================================
+      - name: Find latest release
+        id: previous
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TAG=$(git tag --list 'v*' --sort=-version:refname \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)
+
+          if [ -z "$TAG" ]; then
+            echo "No previous release tag found."
+          else
+            echo "Latest release: $TAG"
+          fi
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      # ============================================================
+      # 7. ANALYZE + CALCULATE VERSION
+      #
+      #   breaking (feat!: / BREAKING CHANGE / removed module) -> MAJOR
+      #   feat: or new module                                  -> MINOR
+      #   fix/perf/refactor/revert/non-conventional            -> PATCH
+      #   docs/chore/style/test/ci/build                       -> no bump
+      #
+      # Only commits touching module directories count.
+      # ============================================================
+      - name: Analyze changes and calculate version
+        id: version
+        shell: bash
+        env:
+          PREVIOUS_TAG: ${{ steps.previous.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          CUR_MODULES="$RUNNER_TEMP/modules.txt"
+          PREV_MODULES="$RUNNER_TEMP/prev_modules.txt"
+          : > "$PREV_MODULES"
+
+          # ---------- first ever release ----------
+          if [ -z "$PREVIOUS_TAG" ]; then
+            {
+              echo "release_type=initial"
+              echo "next_version=$INITIAL_VERSION"
+              echo "new_modules=$(paste -sd, "$CUR_MODULES")"
+              echo "removed_modules="
+              echo "commit_count=0"
+            } >> "$GITHUB_OUTPUT"
+            echo "Initial release -> $INITIAL_VERSION"
+            exit 0
+          fi
+
+          # ---------- modules that existed at previous tag ----------
+          is_module_at() {
+            local out
+            out=$(git ls-tree --name-only "$1:$2" 2>/dev/null || true)
+            grep -qE '\.tf(\.json)?$' <<< "$out"
+          }
+
+          while IFS= read -r dir; do
+            case "$dir" in .*) continue ;; esac
+            if is_module_at "$PREVIOUS_TAG" "$dir"; then
+              echo "$dir" >> "$PREV_MODULES"
+            fi
+          done < <(git ls-tree -d --name-only "$PREVIOUS_TAG" | sort)
+
+          NEW_MODULES=$(comm -13 <(sort "$PREV_MODULES") <(sort "$CUR_MODULES") | paste -sd, -)
+          REMOVED_MODULES=$(comm -23 <(sort "$PREV_MODULES") <(sort "$CUR_MODULES") | paste -sd, -)
+
+          # ---------- classify commits touching modules ----------
+          PATHS=$(cat "$CUR_MODULES" "$PREV_MODULES" | sort -u)
+          mapfile -t PATHSPEC <<< "$PATHS"
+
+          LEVEL=0   # 0 none, 1 patch, 2 minor, 3 major
+          COUNT=0
+          RE='^([a-zA-Z]+)(\([^)]*\))?(!)?: '
+
+          {
+            echo "### Commits considered"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          while IFS= read -r sha; do
+            [ -z "$sha" ] && continue
+            subject=$(git log -1 --format=%s "$sha")
+            body=$(git log -1 --format=%b "$sha")
+
+            type="other"
+            bang=""
+            if [[ "$subject" =~ $RE ]]; then
+              type="${BASH_REMATCH[1],,}"
+              bang="${BASH_REMATCH[3]}"
+            fi
+
+            if [ -n "$bang" ] || grep -qE '^BREAKING[ -]CHANGE:' <<< "$body"; then
+              c=3
+            elif [ "$type" = "feat" ]; then
+              c=2
+            else
+              case "$type" in
+                docs|chore|style|test|ci|build) c=0 ;;
+                *) c=1 ;;
+              esac
+            fi
+
+            COUNT=$((COUNT + 1))
+            [ "$c" -gt "$LEVEL" ] && LEVEL=$c
+            echo "- \`${sha:0:7}\` $subject (level $c)" >> "$GITHUB_STEP_SUMMARY"
+          done < <(git log --no-merges --format=%H "$PREVIOUS_TAG..$GITHUB_SHA" -- "${PATHSPEC[@]}")
+
+          # ---------- module add/remove override ----------
+          if [ -n "$REMOVED_MODULES" ]; then
+            LEVEL=3
+          elif [ -n "$NEW_MODULES" ] && [ "$LEVEL" -lt 2 ]; then
+            LEVEL=2
+          fi
+
+          # ---------- bump ----------
+          CURRENT="${PREVIOUS_TAG#v}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+
+          case "$LEVEL" in
+            3) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0; TYPE="major" ;;
+            2) MINOR=$((MINOR + 1)); PATCH=0; TYPE="minor" ;;
+            1) PATCH=$((PATCH + 1)); TYPE="patch" ;;
+            *) TYPE="none" ;;
+          esac
+
+          NEXT="v${MAJOR}.${MINOR}.${PATCH}"
+
+          echo "==============================================="
+          echo "Previous version : $PREVIOUS_TAG"
+          echo "Commits counted  : $COUNT"
+          echo "New modules      : ${NEW_MODULES:-none}"
+          echo "Removed modules  : ${REMOVED_MODULES:-none}"
+          echo "Release type     : $TYPE"
+          echo "Next version     : $NEXT"
+          echo "==============================================="
+
+          {
+            echo "release_type=$TYPE"
+            echo "next_version=$NEXT"
+            echo "new_modules=$NEW_MODULES"
+            echo "removed_modules=$REMOVED_MODULES"
+            echo "commit_count=$COUNT"
+          } >> "$GITHUB_OUTPUT"
+
+      # ============================================================
+      # 8. NO RELEASE
+      # ============================================================
+      - name: No release required
+        if: steps.version.outputs.release_type == 'none'
+        run: echo "No releasable module changes. Skipping release."
+
+      # ============================================================
+      # 9. TAG CHECK (against remote, not just local)
+      # ============================================================
+      - name: Check tag availability
+        if: steps.version.outputs.release_type != 'none'
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.next_version }}
+        run: |
+          set -euo pipefail
+
+          if git ls-remote --exit-code --tags origin "refs/tags/$VERSION" >/dev/null 2>&1; then
+            echo "::error::Tag $VERSION already exists."
+            exit 1
+          fi
+          echo "Tag $VERSION is available."
+
+      # ============================================================
+      # 10. CREATE RELEASE (gh creates the tag at the same time,
+      #     so there's no orphan-tag state if it fails)
+      # ============================================================
+      - name: Create GitHub release
+        if: steps.version.outputs.release_type != 'none'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.next_version }}
+          RELEASE_TYPE: ${{ steps.version.outputs.release_type }}
+          PREVIOUS_TAG: ${{ steps.previous.outputs.tag }}
+          NEW_MODULES: ${{ steps.version.outputs.new_modules }}
+          REMOVED_MODULES: ${{ steps.version.outputs.removed_modules }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Terraform Module Release"
+            echo ""
+            echo "**Version:** $VERSION"
+            echo "**Release type:** $RELEASE_TYPE"
+            [ -n "$PREVIOUS_TAG" ] && echo "**Previous:** $PREVIOUS_TAG"
+            [ -n "$NEW_MODULES" ] && echo "**New modules:** \`$NEW_MODULES\`"
+            [ -n "$REMOVED_MODULES" ] && echo "**Removed modules (breaking):** \`$REMOVED_MODULES\`"
+            echo ""
+            echo "### Versioning rules (Conventional Commits)"
+            echo ""
+            echo "| Change | Bump |"
+            echo "|---|---|"
+            echo "| \`feat!:\`, \`BREAKING CHANGE:\`, removed module | MAJOR |"
+            echo "| \`feat:\`, new module | MINOR |"
+            echo "| \`fix:\`, \`perf:\`, \`refactor:\`, other | PATCH |"
+            echo "| \`docs:\`, \`chore:\`, \`ci:\`, \`test:\`, \`style:\`, \`build:\` | none |"
+            echo ""
+            echo "Released automatically from \`main\`."
+          } > "$RUNNER_TEMP/notes.md"
+
+          gh release create "$VERSION" \
+            --repo "$REPO" \
+            --target "$GITHUB_SHA" \
+            --title "$VERSION" \
+            --generate-notes \
+            --notes-file "$RUNNER_TEMP/notes.md"
+
+      # ============================================================
+      # 11. SUMMARY
+      # ============================================================
+      - name: Release summary
+        if: steps.version.outputs.release_type != 'none'
+        env:
+          PREVIOUS_TAG: ${{ steps.previous.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.next_version }}
+          RELEASE_TYPE: ${{ steps.version.outputs.release_type }}
+          NEW_MODULES: ${{ steps.version.outputs.new_modules }}
+          REMOVED_MODULES: ${{ steps.version.outputs.removed_modules }}
+        run: |
+          {
+            echo ""
+            echo "### Released $VERSION ($RELEASE_TYPE)"
+            echo "- Previous: ${PREVIOUS_TAG:-none}"
+            echo "- New modules: ${NEW_MODULES:-none}"
+            echo "- Removed modules: ${REMOVED_MODULES:-none}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ============================================================
+      # SLACK: only on failure, or when a release actually happened
+      # ============================================================
+      - name: Slack Notification
+        if: failure() || (success() && steps.version.outputs.release_type != 'none')
+        # TODO: pin to a commit SHA (third-party action)
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_RELEASE }}
+          SLACK_COLOR: ${{ job.status == 'success' && 'good' || 'danger' }}
+          SLACK_TITLE: >-
+            ${{ job.status == 'success'
+              && 'Terraform Module Release Successful'
+              || 'Terraform Module Release Failed' }}
+          SLACK_MESSAGE: |
+            ${{ job.status == 'success'
+              && '🚀 Neon Lens Terraform Module Release Successful'
+              || '❌ Neon Lens Terraform Module Release Failed' }}
+
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Triggered by: ${{ github.actor }}
+
+            Previous Version: ${{ steps.previous.outputs.tag || 'none' }}
+            New Version: ${{ steps.version.outputs.next_version || 'n/a' }}
+            Release Type: ${{ steps.version.outputs.release_type || 'n/a' }}
+            New Modules: ${{ steps.version.outputs.new_modules || 'None' }}
+            Removed Modules: ${{ steps.version.outputs.removed_modules || 'None' }}
+
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SLACK_FOOTER: "Neon-Lens Terraform Module CI/CD"
