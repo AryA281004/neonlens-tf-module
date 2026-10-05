@@ -1,12 +1,12 @@
 output "peering_connection_id" {
   description = "AWS VPC peering connection ID."
-  value       = aws_vpc_peering_connection_accepter.this.id
+  value       = aws_vpc_peering_connection_accepter.neonlens.id
 }
 
 
 output "atlas_peering_id" {
   description = "MongoDB Atlas peering connection ID."
-  value       = mongodbatlas_network_peering.this.id
+  value       = mongodbatlas_network_peering.neonlens.id
 }
 
 
@@ -36,5 +36,5 @@ output "private_route_table_ids" {
 
 output "peering_status" {
   description = "MongoDB Atlas peering status."
-  value       = mongodbatlas_network_peering.this.status
+  value       = mongodbatlas_network_peering.neonlens.status
 }
