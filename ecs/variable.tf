@@ -233,7 +233,7 @@ variable "ephemeral_storage_gib" {
   default     = null
 
   validation {
-    condition = var.ephemeral_storage_gib == null || try(var.ephemeral_storage_gib >= 21 && var.ephemeral_storage_gib <= 200, false)
+    condition     = var.ephemeral_storage_gib == null || try(var.ephemeral_storage_gib >= 21 && var.ephemeral_storage_gib <= 200, false)
     error_message = "ephemeral_storage_gib must be between 21 and 200 GiB."
   }
 }
