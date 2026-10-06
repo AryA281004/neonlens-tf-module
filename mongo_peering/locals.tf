@@ -11,7 +11,7 @@ locals {
 
   atlas_region = upper(replace(var.atlas_region, "-", "_"))
 
-  
+
 
 
 }
