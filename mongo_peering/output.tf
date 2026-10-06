@@ -12,7 +12,7 @@ output "atlas_peering_id" {
 
 output "atlas_container_id" {
   description = "MongoDB Atlas network peering container ID."
-  value       = local.atlas_container_id
+  value       = data.mongodbatlas_network_containers.aws[0].id
 }
 
 

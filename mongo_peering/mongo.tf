@@ -16,7 +16,7 @@ resource "terraform_data" "validate_atlas_container" {
 
   lifecycle {
     precondition {
-      condition     = length(local.matching_atlas_containers) == 1
+      condition     = length(data.mongodbatlas_network_containers.aws[0].id) == 1
       error_message = "No unique MongoDB Atlas network container was found for region ${local.atlas_region} with CIDR ${var.atlas_vpc_cidr}. The Atlas VPC/container must already exist."
     }
   }
@@ -32,7 +32,7 @@ resource "terraform_data" "validate_atlas_container" {
 resource "mongodbatlas_network_peering" "neonlens" {
   project_id = var.project_id
 
-  container_id = local.atlas_container_id
+  container_id = data.mongodbatlas_network_containers.aws[0].id
 
   provider_name = "AWS"
 
