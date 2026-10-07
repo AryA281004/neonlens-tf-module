@@ -11,7 +11,7 @@ locals {
 
   atlas_region = upper(replace(var.atlas_region, "-", "_"))
 
-matching_atlas_containers = [
+  matching_atlas_containers = [
     for container in data.mongodbatlas_network_containers.aws.results :
     container
     if container.region_name == local.atlas_region &&

@@ -79,7 +79,7 @@ resource "aws_vpc_peering_connection_accepter" "neonlens" {
 # ============================================================
 
 resource "aws_route" "atlas" {
-depends_on = [
+  depends_on = [
     aws_vpc_peering_connection_accepter.neonlens,
     aws_route_table.private_rt
   ]
@@ -94,5 +94,5 @@ depends_on = [
     aws_vpc_peering_connection_accepter.neonlens.id
   )
 
-  
+
 }
