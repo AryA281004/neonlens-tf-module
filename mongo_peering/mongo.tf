@@ -32,7 +32,7 @@ resource "terraform_data" "validate_atlas_container" {
 resource "mongodbatlas_network_peering" "neonlens" {
   project_id = var.project_id
 
-  container_id = data.mongodbatlas_network_containers.aws[0].id
+  container_id = data.mongodbatlas_network_containers.aws.id
 
   provider_name = "AWS"
 
@@ -80,8 +80,7 @@ resource "aws_vpc_peering_connection_accepter" "neonlens" {
 
 resource "aws_route" "atlas" {
   depends_on = [
-    aws_vpc_peering_connection_accepter.neonlens,
-    aws_route_table.private_rt
+    aws_vpc_peering_connection_accepter.neonlens
   ]
 
   for_each = toset(var.private_route_table_ids)
