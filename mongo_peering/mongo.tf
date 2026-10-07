@@ -86,7 +86,7 @@ resource "aws_route" "atlas" {
   count          = length(var.private_route_table_ids)
   route_table_id = var.private_route_table_ids[count.index]
 
-  
+
 
   destination_cidr_block = var.atlas_vpc_cidr
 
