@@ -32,7 +32,7 @@ resource "terraform_data" "validate_atlas_container" {
 resource "mongodbatlas_network_peering" "neonlens" {
   project_id = var.project_id
 
-  container_id = data.mongodbatlas_network_containers.aws.id
+  container_id = local.atlas_container_id
 
   provider_name = "AWS"
 
