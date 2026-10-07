@@ -83,9 +83,10 @@ resource "aws_route" "atlas" {
     aws_vpc_peering_connection_accepter.neonlens
   ]
 
-  for_each = toset(var.private_route_table_ids)
+  count          = length(var.private_route_table_ids)
+  route_table_id = var.private_route_table_ids[count.index]
 
-  route_table_id = each.value
+  
 
   destination_cidr_block = var.atlas_vpc_cidr
 
