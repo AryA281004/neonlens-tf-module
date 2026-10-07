@@ -18,7 +18,7 @@ locals {
     container.atlas_cidr_block == var.atlas_vpc_cidr
   ]
 
-  atlas_container_id = try(local.matching_atlas_containers.id, null)
 
 
+  atlas_container_id = try(local.matching_atlas_containers[0].container_id,"" )
 }

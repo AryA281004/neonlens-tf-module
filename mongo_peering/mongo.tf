@@ -50,6 +50,13 @@ resource "mongodbatlas_network_peering" "neonlens" {
   */
   route_table_cidr_block = var.aws_vpc_cidr
 
+  lifecycle {
+    precondition {
+      condition     = can(regex("^[0-9a-f]{24}$", local.atlas_container_id))
+      error_message = "Atlas container ID is not a 24-char hex string: '${local.atlas_container_id}'"
+    }
+  }
+
   depends_on = [
     terraform_data.validate_atlas_container
   ]
