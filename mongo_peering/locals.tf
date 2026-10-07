@@ -20,5 +20,5 @@ locals {
 
 
 
-  atlas_container_id = try(local.matching_atlas_containers[0].container_id,"" )
+  atlas_container_id = try(local.matching_atlas_containers[0].container_id, "")
 }
