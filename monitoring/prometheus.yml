@@ -1,0 +1,29 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+  external_labels:
+    environment: ${environment}
+    service: neonlens
+
+rule_files:
+  - /etc/prometheus/backend.rules.yml
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+
+  - job_name: neonlens-backend
+
+    metrics_path: /metrics
+
+    dns_sd_configs:
+      - names:
+          - backend.neonlens.internal
+        type: A
+        port: 3000
+
+    relabel_configs:
+      - source_labels:
+          - __meta_dns_name
+        target_label: service
+        replacement: backend

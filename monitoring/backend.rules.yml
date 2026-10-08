@@ -1,0 +1,42 @@
+groups:
+
+  - name: neonlens-backend-recording-rules
+
+    interval: 30s
+
+    rules:
+
+      - record: neonlens:http_requests_per_second
+        expr: |
+          sum(
+            rate(
+              neonlens_http_requests_total[5m]
+            )
+          )
+
+      - record: neonlens:http_5xx_rate
+        expr: |
+          sum(
+            rate(
+              neonlens_http_requests_5xx_total[5m]
+            )
+          )
+
+      - record: neonlens:http_4xx_rate
+        expr: |
+          sum(
+            rate(
+              neonlens_http_requests_4xx_total[5m]
+            )
+          )
+
+      - record: neonlens:http_request_latency_p95
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (
+              rate(
+                neonlens_http_request_duration_seconds_bucket[5m]
+              )
+            )
+          )

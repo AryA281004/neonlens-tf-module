@@ -1,0 +1,103 @@
+groups:
+
+  - name: neonlens-backend-alerts
+
+    rules:
+
+      # ======================================================
+      # BACKEND DOWN
+      # ======================================================
+
+      - alert: NeonLensBackendDown
+
+        expr: up{job="neonlens-backend"} == 0
+
+        for: 2m
+
+        labels:
+          severity: critical
+
+        annotations:
+          summary: "NeonLens backend is down"
+          description: "Prometheus cannot scrape the NeonLens backend."
+
+
+      # ======================================================
+      # HIGH 5XX RATE
+      # ======================================================
+
+      - alert: NeonLensBackendHigh5xxRate
+
+        expr: |
+          (
+            sum(
+              rate(
+                neonlens_http_requests_5xx_total[5m]
+              )
+            )
+            /
+            clamp_min(
+              sum(
+                rate(
+                  neonlens_http_requests_total[5m]
+                )
+              ),
+              1
+            )
+          ) > 0.05
+
+        for: 5m
+
+        labels:
+          severity: critical
+
+        annotations:
+          summary: "NeonLens backend has high 5xx rate"
+          description: "More than 5% of backend requests are returning 5xx responses."
+
+
+      # ======================================================
+      # HIGH LATENCY
+      # ======================================================
+
+      - alert: NeonLensBackendHighLatency
+
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (
+              rate(
+                neonlens_http_request_duration_seconds_bucket[5m]
+              )
+            )
+          ) > 2
+
+        for: 10m
+
+        labels:
+          severity: warning
+
+        annotations:
+          summary: "NeonLens backend latency is high"
+          description: "Backend p95 latency has exceeded 2 seconds."
+
+
+      # ======================================================
+      # HIGH IN-FLIGHT REQUESTS
+      # ======================================================
+
+      - alert: NeonLensBackendHighInFlightRequests
+
+        expr: |
+          sum(
+            neonlens_http_requests_in_flight
+          ) > 100
+
+        for: 5m
+
+        labels:
+          severity: warning
+
+        annotations:
+          summary: "NeonLens backend has many in-flight requests"
+          description: "The backend has more than 100 concurrent HTTP requests."

@@ -113,3 +113,36 @@ output "https_url" {
   description = "HTTPS endpoint for the Application Load Balancer."
   value       = var.enable_https_listener ? "https://${var.alb_dns_name}" : null
 }
+
+# ============================================================
+# SERVICE DISCOVERY
+# ============================================================
+
+output "service_discovery_namespace_id" {
+  description = "AWS Cloud Map private DNS namespace ID."
+  value       = var.enable_service_discovery ? local.service_discovery_namespace_id : null
+}
+
+output "service_discovery_namespace_name" {
+  description = "AWS Cloud Map private DNS namespace name."
+  value       = var.enable_service_discovery ? var.service_discovery_namespace_name : null
+}
+
+output "service_discovery_service_id" {
+  description = "AWS Cloud Map service ID."
+  value       = try(aws_service_discovery_service.neonlens[0].id, null)
+}
+
+output "service_discovery_service_arn" {
+  description = "AWS Cloud Map service ARN."
+  value       = try(aws_service_discovery_service.neonlens[0].arn, null)
+}
+
+output "service_discovery_dns_name" {
+  description = "Private DNS name of the ECS service."
+  value = var.enable_service_discovery ? format(
+    "%s.%s",
+    var.service_discovery_service_name,
+    var.service_discovery_namespace_name
+  ) : null
+}
