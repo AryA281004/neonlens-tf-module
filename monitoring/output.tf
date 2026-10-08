@@ -22,20 +22,11 @@ output "prometheus_name" {
   value       = local.prometheus_name
 }
 
-
-# ============================================================
-# GRAFANA
-# ============================================================
-
-output "grafana_port" {
-  description = "Grafana HTTP port."
-  value       = var.grafana_port
+output "prometheus_security_group_id" {
+  description = "Prometheus security group ID."
+  value       = aws_security_group.prometheus.id
 }
 
-output "grafana_name" {
-  description = "Grafana resource name."
-  value       = local.grafana_name
-}
 
 # ============================================================
 # GRAFANA
