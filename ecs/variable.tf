@@ -409,3 +409,41 @@ variable "alb_dns_name" {
   description = "DNS name of the ALB, passed in from the alb module."
   type        = string
 }
+# ============================================================
+# CLOUD MAP SERVICE DISCOVERY
+# ============================================================
+
+variable "enable_service_discovery" {
+  description = "Enable AWS Cloud Map private DNS service discovery for the ECS service."
+  type        = bool
+  default     = false
+}
+
+variable "service_discovery_namespace_name" {
+  description = "Private DNS namespace used for ECS service discovery."
+  type        = string
+  default     = "neonlens.internal"
+}
+
+variable "service_discovery_namespace_id" {
+  description = "Existing AWS Cloud Map private DNS namespace ID. If null, the module creates one."
+  type        = string
+  default     = null
+}
+
+variable "service_discovery_service_name" {
+  description = "Cloud Map service name."
+  type        = string
+  default     = "backend"
+}
+
+variable "service_discovery_dns_ttl" {
+  description = "DNS TTL for Cloud Map service records in seconds."
+  type        = number
+  default     = 10
+
+  validation {
+    condition     = var.service_discovery_dns_ttl >= 1 && var.service_discovery_dns_ttl <= 60
+    error_message = "service_discovery_dns_ttl must be between 1 and 60 seconds."
+  }
+}
