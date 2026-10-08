@@ -295,3 +295,84 @@ resource "aws_iam_role" "grafana_task" {
 
   tags = local.common_tags
 }
+
+# ============================================================
+# GRAFANA TASK POLICY
+# ============================================================
+
+resource "aws_iam_role_policy" "grafana_task" {
+  name = "${local.grafana_name}-task-policy"
+
+  role = aws_iam_role.grafana_task.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+
+      # ------------------------------------------------------
+      # GRAFANA CONFIGURATION
+      # ------------------------------------------------------
+
+      {
+        Sid    = "ReadGrafanaConfiguration"
+        Effect = "Allow"
+
+        Action = [
+          "s3:GetObject"
+        ]
+
+        Resource = [
+          aws_s3_object.grafana_datasource.arn
+        ]
+      },
+
+      # ------------------------------------------------------
+      # GRAFANA EFS
+      # ------------------------------------------------------
+
+      {
+        Sid    = "MountGrafanaEFS"
+        Effect = "Allow"
+
+        Action = [
+          "elasticfilesystem:ClientMount",
+          "elasticfilesystem:ClientWrite"
+        ]
+
+        Resource = aws_efs_file_system.grafana.arn
+
+        Condition = {
+          StringEquals = {
+            "elasticfilesystem:AccessPointArn" = aws_efs_access_point.grafana.arn
+          }
+        }
+      }
+    ]
+  })
+}
+
+# ============================================================
+# GRAFANA DATASOURCE CONFIGURATION
+# ============================================================
+
+resource "aws_s3_object" "grafana_datasource" {
+  bucket = aws_s3_bucket.prometheus_config.id
+
+  key = "grafana/datasources/grafana.ini.yml"
+
+  content = file(
+    "${path.module}/grafana.ini.yml"
+  )
+
+  content_type = "text/yaml"
+
+  server_side_encryption = "AES256"
+
+  tags = merge(
+    local.common_tags,
+    {
+      Component = "Grafana"
+    }
+  )
+}
