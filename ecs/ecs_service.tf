@@ -45,6 +45,14 @@ resource "aws_ecs_service" "neonlens" {
     container_port   = var.container_port
   }
 
+  dynamic "service_registries" {
+    for_each = var.enable_service_discovery ? [1] : []
+
+    content {
+      registry_arn = aws_service_discovery_service.neonlens[0].arn
+    }
+  }
+
   lifecycle {
     ignore_changes = [
       desired_count
