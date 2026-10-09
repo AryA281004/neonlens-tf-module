@@ -1,5 +1,5 @@
 locals {
-  name_prefix = "${var.environment}-${var.name}-monitoring"
+  name_prefix = "${var.environment}-${var.name}-monitor"
 
   common_tags = merge(
     {
