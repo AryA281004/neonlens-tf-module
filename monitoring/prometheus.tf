@@ -216,7 +216,7 @@ resource "aws_ecs_service" "prometheus" {
   enable_execute_command = false
 
   network_configuration {
-    subnets = var.private_subnet_ids
+    subnets = values(var.private_subnet_ids)
 
     security_groups = [
       aws_security_group.prometheus.id

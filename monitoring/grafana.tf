@@ -224,7 +224,7 @@ resource "aws_ecs_service" "grafana" {
   enable_execute_command = false
 
   network_configuration {
-    subnets = var.private_subnet_ids
+    subnets = values(var.private_subnet_ids)
 
     security_groups = [
       aws_security_group.grafana.id

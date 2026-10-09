@@ -3,7 +3,7 @@
 # ============================================================
 
 resource "aws_s3_bucket" "prometheus_config" {
-  bucket_prefix = "${local.prometheus_name}-config-"
+  bucket_prefix = "${local.prometheus_name}-config"
 
   tags = merge(
     local.common_tags,
