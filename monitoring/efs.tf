@@ -180,7 +180,7 @@ resource "aws_vpc_security_group_ingress_rule" "efs_from_grafana" {
 # ============================================================
 
 resource "aws_efs_mount_target" "prometheus" {
-  for_each = toset(var.private_subnet_ids)
+  for_each = var.private_subnet_ids
 
   file_system_id  = aws_efs_file_system.prometheus.id
   subnet_id       = each.value
@@ -193,7 +193,7 @@ resource "aws_efs_mount_target" "prometheus" {
 # ============================================================
 
 resource "aws_efs_mount_target" "grafana" {
-  for_each = toset(var.private_subnet_ids)
+  for_each = var.private_subnet_ids
 
   file_system_id  = aws_efs_file_system.grafana.id
   subnet_id       = each.value

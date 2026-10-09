@@ -45,7 +45,7 @@ variable "vpc_id" {
 
 variable "private_subnet_ids" {
   description = "Private subnet IDs used by Prometheus and Grafana."
-  type        = list(string)
+  type        = map(string)
 
   validation {
     condition     = length(var.private_subnet_ids) >= 2
