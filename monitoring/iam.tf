@@ -376,3 +376,30 @@ resource "aws_s3_object" "grafana_datasource" {
     }
   )
 }
+
+resource "aws_iam_role_policy" "prometheus_s3_config" {
+  name = "prometheus-s3-config-access"
+  role = aws_iam_role.prometheus_task.name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "ListPrometheusConfigBucket"
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket"
+        ]
+        Resource = "arn:aws:s3:::${local.prometheus_config_bucket}"
+      },
+      {
+        Sid    = "ReadPrometheusConfigObjects"
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject"
+        ]
+        Resource = "arn:aws:s3:::${local.prometheus_config_bucket}/*"
+      }
+    ]
+  })
+}

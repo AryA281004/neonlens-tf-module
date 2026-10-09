@@ -226,3 +226,13 @@ variable "prometheus_service_discovery_name" {
   type        = string
   default     = "prometheus"
 }
+
+variable "private_route_table_ids" {
+  description = "Private route table IDs for the VPC endpoints."
+  type        = map(string)
+
+  validation {
+    condition     = length(var.private_route_table_ids) >= 1
+    error_message = "At least one private route table ID is required for the S3 VPC endpoint."
+  }
+}

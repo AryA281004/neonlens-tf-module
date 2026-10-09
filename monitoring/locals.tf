@@ -22,4 +22,7 @@ locals {
 
   prometheus_service_name = "${local.prometheus_name}-service"
   grafana_service_name    = "${local.grafana_name}-service"
+
+  prometheus_config_bucket = local.prometheus_name
+
 }
