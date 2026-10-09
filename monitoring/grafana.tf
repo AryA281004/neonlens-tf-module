@@ -79,7 +79,7 @@ resource "aws_ecs_task_definition" "grafana" {
       {
         name = "config-init"
 
-        image = "public.ecr.aws/aws-cli/aws-cli:2"
+        image = "public.ecr.aws/aws-cli/aws-cli:latest"
 
         essential = false
 
