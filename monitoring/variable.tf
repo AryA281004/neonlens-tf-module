@@ -241,3 +241,8 @@ variable "grafana_alb_security_group_id" {
   description = "Security group ID of the ALB allowed to access Grafana."
   type        = string
 }
+
+variable "grafana_target_group_arn" {
+  description = "Grafana target group ARN from the existing ALB."
+  type        = string
+}

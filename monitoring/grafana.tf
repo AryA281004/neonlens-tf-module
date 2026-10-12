@@ -233,6 +233,12 @@ resource "aws_ecs_service" "grafana" {
     assign_public_ip = false
   }
 
+  load_balancer {
+    target_group_arn = var.grafana_target_group_arn
+    container_name   = local.grafana_container_name
+    container_port   = var.grafana_port
+  }
+
   deployment_minimum_healthy_percent = 100
   deployment_maximum_percent         = 200
 
