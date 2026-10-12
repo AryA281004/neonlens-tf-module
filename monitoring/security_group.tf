@@ -7,6 +7,15 @@ resource "aws_security_group" "prometheus" {
   description = "Security group for NeonLens Prometheus."
   vpc_id      = var.vpc_id
 
+  # Grafana -> Prometheus (9090)
+  ingress {
+    description     = "Allow Grafana to query Prometheus."
+    from_port       = var.prometheus_port
+    to_port         = var.prometheus_port
+    protocol        = "tcp"
+    security_groups = [aws_security_group.grafana.id]
+  }
+
   egress {
     description = "Allow outbound traffic."
     from_port   = 0
@@ -15,13 +24,10 @@ resource "aws_security_group" "prometheus" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = merge(
-    local.common_tags,
-    {
-      Name      = "${local.prometheus_name}-sg"
-      Component = "Prometheus"
-    }
-  )
+  tags = merge(local.common_tags, {
+    Name      = "${local.prometheus_name}-sg"
+    Component = "Prometheus"
+  })
 }
 
 
@@ -34,6 +40,24 @@ resource "aws_security_group" "grafana" {
   description = "Security group for NeonLens Grafana."
   vpc_id      = var.vpc_id
 
+  # Prometheus -> Grafana (3030)
+  ingress {
+    description     = "Allow Prometheus to reach Grafana."
+    from_port       = var.grafana_port
+    to_port         = var.grafana_port
+    protocol        = "tcp"
+    security_groups = [aws_security_group.prometheus.id]
+  }
+
+  # ALB -> Grafana (3030)
+  ingress {
+    description     = "Allow ALB traffic to Grafana."
+    from_port       = var.grafana_port
+    to_port         = var.grafana_port
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+  }
+
   egress {
     description = "Allow outbound traffic."
     from_port   = 0
@@ -42,43 +66,8 @@ resource "aws_security_group" "grafana" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = merge(
-    local.common_tags,
-    {
-      Name      = "${local.grafana_name}-sg"
-      Component = "Grafana"
-    }
-  )
-}
-
-
-# ============================================================
-# PROMETHEUS -> BACKEND
-# ============================================================
-
-resource "aws_vpc_security_group_ingress_rule" "backend_from_prometheus" {
-  security_group_id            = var.backend_security_group_id
-  referenced_security_group_id = aws_security_group.prometheus.id
-
-  from_port   = var.container_port
-  to_port     = var.container_port
-  ip_protocol = "tcp"
-
-  description = "Allow Prometheus to scrape backend metrics."
-}
-
-
-# ============================================================
-# PROMETHEUS -> GRAFANA
-# ============================================================
-
-resource "aws_vpc_security_group_ingress_rule" "grafana_from_prometheus" {
-  security_group_id            = aws_security_group.prometheus.id
-  referenced_security_group_id = aws_security_group.grafana.id
-
-  from_port   = var.prometheus_port
-  to_port     = var.prometheus_port
-  ip_protocol = "tcp"
-
-  description = "Allow Prometheus traffic from Prometheus security group."
+  tags = merge(local.common_tags, {
+    Name      = "${local.grafana_name}-sg"
+    Component = "Grafana"
+  })
 }
