@@ -35,7 +35,7 @@ resource "aws_security_group" "grafana" {
     from_port       = var.grafana_port
     to_port         = var.grafana_port
     protocol        = "tcp"
-    security_groups = [aws_security_group.alb.id]
+    security_groups = [var.grafana_alb_security_group_id]
   }
 
   egress {

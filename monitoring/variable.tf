@@ -236,3 +236,8 @@ variable "private_route_table_ids" {
     error_message = "At least one private route table ID is required for the S3 VPC endpoint."
   }
 }
+
+variable "grafana_alb_security_group_id" {
+  description = "Security group ID of the ALB allowed to access Grafana."
+  type        = string
+}
