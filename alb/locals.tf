@@ -16,6 +16,8 @@ locals {
 
   target_group_name = "${local.name_prefix}-tg"
 
+  grafana_target_group_name = "${local.name_prefix}-grafana-tg"
+
 
 
 }

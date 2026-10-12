@@ -158,3 +158,30 @@ variable "host_header_values" {
   type        = list(string)
   default     = []
 }
+
+# ============================================================
+# GRAFANA TARGET GROUP
+# ============================================================
+
+variable "grafana_port" {
+  description = "Port exposed by the Grafana container."
+  type        = number
+  default     = 3030
+
+  validation {
+    condition     = var.grafana_port >= 1 && var.grafana_port <= 65535
+    error_message = "grafana_port must be between 1 and 65535."
+  }
+}
+
+variable "grafana_health_check_path" {
+  description = "Health check path for the Grafana target group."
+  type        = string
+  default     = "/"
+}
+
+variable "grafana_host_header_values" {
+  description = "Hostnames routed to the Grafana target group."
+  type        = list(string)
+  default     = []
+}
