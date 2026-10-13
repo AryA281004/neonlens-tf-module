@@ -18,6 +18,6 @@ locals {
 
   grafana_target_group_name = "${local.name_prefix}-grafana-tg"
 
-
+  prometheus_target_group_name = "${local.name_prefix}-prometheus-tg"
 
 }

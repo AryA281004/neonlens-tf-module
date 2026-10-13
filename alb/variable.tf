@@ -185,3 +185,26 @@ variable "grafana_host_header_values" {
   type        = list(string)
   default     = []
 }
+
+variable "prometheus_port" {
+  description = "Port exposed by the Prometheus container."
+  type        = number
+  default     = 9090
+
+  validation {
+    condition     = var.prometheus_port >= 1 && var.prometheus_port <= 65535
+    error_message = "prometheus_port must be between 1 and 65535."
+  }
+}
+
+variable "prometheus_health_check_path" {
+  description = "Health check path for the Prometheus target group."
+  type        = string
+  default     = "/"
+}
+
+variable "prometheus_host_header_values" {
+  description = "Hostnames routed to the Prometheus target group."
+  type        = list(string)
+  default     = []
+}

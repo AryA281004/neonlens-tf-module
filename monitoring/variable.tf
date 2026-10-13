@@ -246,3 +246,13 @@ variable "grafana_target_group_arn" {
   description = "Grafana target group ARN from the existing ALB."
   type        = string
 }
+
+variable "prometheus_target_group_arn" {
+  description = "Prometheus target group ARN from the existing ALB."
+  type        = string
+}
+
+variable "alb_security_group_id" {
+  description = "Security group ID of the ALB allowed to access Prometheus."
+  type        = string
+}

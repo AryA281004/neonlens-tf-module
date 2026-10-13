@@ -8,7 +8,10 @@ resource "aws_security_group" "prometheus" {
     from_port       = var.prometheus_port
     to_port         = var.prometheus_port
     protocol        = "tcp"
-    security_groups = [aws_security_group.grafana.id]
+    security_groups = [
+      aws_security_group.grafana.id,
+      var.alb_security_group_id
+      ]
   }
 
   egress {

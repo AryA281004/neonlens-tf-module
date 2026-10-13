@@ -72,3 +72,34 @@ resource "aws_lb_target_group" "grafana" {
     create_before_destroy = true
   }
 }
+
+resource "aws_lb_target_group" "prometheus" {
+  name        = local.prometheus_target_group_name
+  port        = var.prometheus_port
+  protocol    = "HTTP"
+  target_type = "ip"
+  vpc_id      = var.vpc_id
+
+  deregistration_delay = var.deregistration_delay
+
+  health_check {
+    enabled             = true
+    path                = var.prometheus_health_check_path
+    protocol            = "HTTP"
+    port                = "traffic-port"
+    matcher             = "200-399"
+    interval            = var.health_check_interval
+    timeout             = var.health_check_timeout
+    healthy_threshold   = var.healthy_threshold
+    unhealthy_threshold = var.unhealthy_threshold
+  }
+
+  tags = merge(local.common_tags, {
+    Name      = local.prometheus_target_group_name
+    Component = "PrometheusTargetGroup"
+  })
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}

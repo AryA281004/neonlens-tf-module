@@ -80,3 +80,23 @@ output "grafana_listener_rule_arn" {
   description = "Grafana HTTPS listener rule ARN, if enabled."
   value       = try(aws_lb_listener_rule.grafana_host_header[0].arn, null)
 }
+
+output "prometheus_target_group_id" {
+  description = "Prometheus target group ID."
+  value       = aws_lb_target_group.prometheus.id
+}
+
+output "prometheus_target_group_arn" {
+  description = "Prometheus target group ARN."
+  value       = aws_lb_target_group.prometheus.arn
+}
+
+output "prometheus_target_group_name" {
+  description = "Prometheus target group name."
+  value       = aws_lb_target_group.prometheus.name
+}
+
+output "prometheus_listener_rule_arn" {
+  description = "Prometheus listener rule ARN, if created."
+  value       = try(aws_lb_listener_rule.prometheus_host_header[0].arn, null)
+}
