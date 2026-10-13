@@ -4,14 +4,14 @@ resource "aws_security_group" "prometheus" {
   vpc_id      = var.vpc_id
 
   ingress {
-    description     = "Allow Grafana to query Prometheus."
-    from_port       = var.prometheus_port
-    to_port         = var.prometheus_port
-    protocol        = "tcp"
+    description = "Allow Grafana to query Prometheus."
+    from_port   = var.prometheus_port
+    to_port     = var.prometheus_port
+    protocol    = "tcp"
     security_groups = [
       aws_security_group.grafana.id,
       var.alb_security_group_id
-      ]
+    ]
   }
 
   egress {

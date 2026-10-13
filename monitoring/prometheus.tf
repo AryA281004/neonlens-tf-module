@@ -225,7 +225,7 @@ resource "aws_ecs_service" "prometheus" {
     assign_public_ip = false
   }
 
-    load_balancer {
+  load_balancer {
     target_group_arn = var.prometheus_target_group_arn
     container_name   = local.prometheus_container_name
     container_port   = var.prometheus_port
