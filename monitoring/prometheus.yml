@@ -11,9 +11,8 @@ rule_files:
   - /etc/prometheus/alerts.yml
 
 scrape_configs:
-
+  # Direct application metrics
   - job_name: neonlens-backend
-
     metrics_path: /metrics
 
     dns_sd_configs:
@@ -23,7 +22,33 @@ scrape_configs:
         port: 3000
 
     relabel_configs:
-      - source_labels:
-          - __meta_dns_name
+      - source_labels: [__meta_dns_name]
         target_label: service
+        replacement: backend
+
+  # HTTP availability probes through each backend task's sidecar
+  - job_name: neonlens-blackbox
+    metrics_path: /probe
+
+    params:
+      module: [http_2xx]
+
+    dns_sd_configs:
+      - names:
+          - backend.neonlens.internal
+        type: A
+        port: 9115
+
+    relabel_configs:
+      # Probe the backend on the same task's private IP
+      - source_labels: [__address__]
+        regex: '(.+):9115'
+        target_label: __param_target
+        replacement: 'http://$1:3000/'
+
+      # Identify the probed backend in Prometheus
+      - source_labels: [__param_target]
+        target_label: instance
+
+      - target_label: service
         replacement: backend

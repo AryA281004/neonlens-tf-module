@@ -13,3 +13,15 @@ datasources:
     isDefault: true
 
     editable: false
+
+  - name: CloudWatch
+    
+    type: cloudwatch
+    
+    access: proxy
+    
+    jsonData:
+      authType: default
+      defaultRegion: ${aws_region}
+    
+    editable: false

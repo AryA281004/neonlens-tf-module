@@ -1,0 +1,35 @@
+[
+{
+  "name": "${blackbox_container_name}",
+  "image": "${blackbox_exporter_image}",
+  "essential": false,
+  "cpu": "${blackbox_exporter_cpu}",
+  "memory": "${blackbox_exporter_memory}",
+
+  "portMappings": [
+    {
+      "name": "${blackbox_port_name}",
+      "containerPort": 9115,
+      "hostPort": 9115,
+      "protocol": "tcp"
+    }
+  ],
+
+  "command": [
+    "--config.file=/etc/blackbox_exporter/config.yml",
+    "--web.listen-address=:9115"
+  ],
+
+  "logConfiguration": {
+    "logDriver": "awslogs",
+    "options": {
+      "awslogs-group": "${log_group_name}",
+      "awslogs-region": "${aws_region}",
+      "awslogs-stream-prefix": "${blackbox_log_stream_prefix}"
+    }
+  },
+
+  "readonlyRootFilesystem": true,
+  "stopTimeout": "${container_stop_timeout}"
+}
+]

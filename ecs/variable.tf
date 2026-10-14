@@ -453,3 +453,27 @@ variable "service_discovery_dns_ttl" {
     error_message = "service_discovery_dns_ttl must be between 1 and 60 seconds."
   }
 }
+
+variable "enable_blackbox_exporter" {
+  description = "Enable the optional Blackbox Exporter sidecar."
+  type        = bool
+  default     = false
+}
+
+variable "blackbox_exporter_image" {
+  description = "Blackbox Exporter container image."
+  type        = string
+
+}
+
+variable "blackbox_exporter_cpu" {
+  description = "CPU units reserved for the Blackbox Exporter container."
+  type        = number
+
+}
+
+variable "blackbox_exporter_memory" {
+  description = "Memory in MiB reserved for the Blackbox Exporter container."
+  type        = number
+
+}

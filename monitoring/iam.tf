@@ -347,6 +347,24 @@ resource "aws_iam_role_policy" "grafana_task" {
             "elasticfilesystem:AccessPointArn" = aws_efs_access_point.grafana.arn
           }
         }
+      },
+
+      {
+        Sid    = "ReadCloudWatchMetrics"
+        Effect = "Allow"
+
+        Action = [
+          "cloudwatch:GetMetricData",
+          "cloudwatch:GetMetricStatistics",
+          "cloudwatch:ListMetrics",
+          "cloudwatch:DescribeAlarms",
+          "cloudwatch:DescribeAlarmHistory",
+          "cloudwatch:DescribeAlarmsForMetric",
+          "ec2:DescribeRegions",
+          "tag:GetResources"
+        ]
+
+        Resource = "*"
       }
     ]
   })
@@ -361,9 +379,12 @@ resource "aws_s3_object" "grafana_datasource" {
 
   key = "grafana/datasources/grafana.ini.yml"
 
-  content = file(
-    "${path.module}/grafana.ini.yml"
-  )
+  content = templatefile(
+  "${path.module}/grafana.ini.yml",
+  {
+    aws_region = var.aws_region
+  }
+)
 
   content_type = "text/yaml"
 

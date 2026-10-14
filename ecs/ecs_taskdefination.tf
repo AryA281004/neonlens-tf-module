@@ -14,6 +14,8 @@ resource "aws_ecs_task_definition" "neonlens" {
   execution_role_arn = aws_iam_role.execution.arn
   task_role_arn      = aws_iam_role.task.arn
 
+
+
   container_definitions = templatefile(
     "${path.module}/container-definitions.tftpl",
     {
@@ -41,8 +43,46 @@ resource "aws_ecs_task_definition" "neonlens" {
       log_stream_prefix        = var.log_stream_prefix
       readonly_root_filesystem = var.readonly_root_filesystem
       container_stop_timeout   = var.container_stop_timeout
+
+      enable_blackbox_exporter = var.enable_blackbox_exporter
+
+      blackbox_container_definition = var.enable_blackbox_exporter ? ", ${jsonencode({
+        name      = "${local.name_prefix}-blackbox-exporter"
+        image     = var.blackbox_exporter_image
+        essential = false
+        cpu       = var.blackbox_exporter_cpu
+        memory    = var.blackbox_exporter_memory
+
+        portMappings = [
+          {
+            name          = "${var.name}-blackbox-port"
+            containerPort = 9115
+            hostPort      = 9115
+            protocol      = "tcp"
+          }
+        ]
+
+        command = [
+          "--config.file=/etc/blackbox_exporter/config.yml",
+          "--web.listen-address=:9115"
+        ]
+
+        logConfiguration = {
+          logDriver = "awslogs"
+          options = {
+            "awslogs-group"         = aws_cloudwatch_log_group.neonlens.name
+            "awslogs-region"        = var.aws_region
+            "awslogs-stream-prefix" = "${var.log_stream_prefix}-blackbox"
+          }
+        }
+
+        readonlyRootFilesystem = true
+        stopTimeout            = var.container_stop_timeout
+      })}" : ""
     }
   )
+
+
 
   dynamic "runtime_platform" {
     for_each = var.cpu_architecture != null || var.operating_system_family != null ? [1] : []
