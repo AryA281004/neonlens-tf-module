@@ -457,7 +457,7 @@ variable "service_discovery_dns_ttl" {
 variable "enable_blackbox_exporter" {
   description = "Enable the optional Blackbox Exporter sidecar."
   type        = bool
-  
+
 }
 
 variable "blackbox_exporter_image" {
