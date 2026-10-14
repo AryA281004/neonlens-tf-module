@@ -380,11 +380,11 @@ resource "aws_s3_object" "grafana_datasource" {
   key = "grafana/datasources/grafana.ini.yml"
 
   content = templatefile(
-  "${path.module}/grafana.ini.yml",
-  {
-    aws_region = var.aws_region
-  }
-)
+    "${path.module}/grafana.ini.yml",
+    {
+      aws_region = var.aws_region
+    }
+  )
 
   content_type = "text/yaml"
 
