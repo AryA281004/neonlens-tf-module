@@ -46,7 +46,7 @@ resource "aws_ecs_task_definition" "neonlens" {
 
       enable_blackbox_exporter = var.enable_blackbox_exporter
 
-      blackbox_container_definition = var.enable_blackbox_exporter ? ", ${jsonencode({
+      blackbox_container_definition = var.enable_blackbox_exporter ? jsonencode({
         name      = "${local.name_prefix}-blackbox-exporter"
         image     = var.blackbox_exporter_image
         essential = false
@@ -78,7 +78,7 @@ resource "aws_ecs_task_definition" "neonlens" {
 
         readonlyRootFilesystem = true
         stopTimeout            = var.container_stop_timeout
-      })}" : ""
+      }) : ""
     }
   )
 
