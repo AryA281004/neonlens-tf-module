@@ -3,8 +3,8 @@
   "name": "${blackbox_container_name}",
   "image": "${blackbox_exporter_image}",
   "essential": false,
-  "cpu": "${blackbox_exporter_cpu}",
-  "memory": "${blackbox_exporter_memory}",
+  "cpu": ${blackbox_exporter_cpu},
+  "memory": ${blackbox_exporter_memory},
 
   "portMappings": [
     {
@@ -30,6 +30,6 @@
   },
 
   "readonlyRootFilesystem": true,
-  "stopTimeout": "${container_stop_timeout}"
+  "stopTimeout": ${container_stop_timeout}
 }
 ]

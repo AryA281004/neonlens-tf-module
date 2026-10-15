@@ -2,25 +2,25 @@
   {
     "name": "${container_name}",
     "image": "${container_image}",
-    "essential": "${essential}",
+    "essential": ${essential},
 
-    "cpu": "${container_cpu}",
-    "memory": "${container_memory}",
+    "cpu": ${container_cpu},
+    "memory": ${container_memory},
 
     "portMappings": [
       {
         "name": "${port_name}",
-        "containerPort": "${container_port}",
-        "hostPort": "${container_port}",
+        "containerPort": ${container_port},
+        "hostPort": ${container_port},
         "protocol": "tcp"
       }
     ],
 
-    "environment": "${container_environment}",
+    "environment": ${container_environment},
 
-    "secrets": "${container_secrets}",
+    "secrets": ${container_secrets},
 
-    "healthCheck": "${health_check}",
+    "healthCheck": ${health_check},
 
     "logConfiguration": {
       "logDriver": "awslogs",
@@ -31,9 +31,9 @@
       }
     },
 
-    "readonlyRootFilesystem": "${readonly_root_filesystem}",
+    "readonlyRootFilesystem": ${readonly_root_filesystem},
 
-    "stopTimeout": "${container_stop_timeout}"
+    "stopTimeout": ${container_stop_timeout}
   }
   ${enable_blackbox_exporter ? blackbox_container_definition : ""}
 ]
