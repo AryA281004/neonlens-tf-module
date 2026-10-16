@@ -8,7 +8,7 @@ datasources:
 
     access: proxy
 
-    url: ${prometheus_domain}
+    url: https://${prometheus_domain}
 
     isDefault: true
 
