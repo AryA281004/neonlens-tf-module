@@ -382,7 +382,8 @@ resource "aws_s3_object" "grafana_datasource" {
   content = templatefile(
     "${path.module}/grafana.ini.yml",
     {
-      aws_region = var.aws_region
+      aws_region        = var.aws_region,
+      prometheus_domain = var.prometheus_domain
     }
   )
 

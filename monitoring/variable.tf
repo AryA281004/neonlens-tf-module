@@ -256,3 +256,13 @@ variable "alb_security_group_id" {
   description = "Security group ID of the ALB allowed to access Prometheus."
   type        = string
 }
+
+variable "prometheus_domain" {
+  description = "Prometheus custom domain pointing to the Application Load Balancer."
+  type        = string
+
+  validation {
+    condition     = length(trimspace(var.prometheus_domain)) > 0
+    error_message = "prometheus_domain must not be empty."
+  }
+}
