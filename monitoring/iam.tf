@@ -56,7 +56,8 @@ resource "aws_s3_object" "prometheus_config" {
   content = templatefile(
     "${path.module}/prometheus.yml",
     {
-      environment = var.environment
+      environment    = var.environment,
+      backend_domain = var.backend_domain
     }
   )
 
@@ -421,4 +422,28 @@ resource "aws_iam_role_policy" "prometheus_s3_config" {
       }
     ]
   })
+}
+
+resource "aws_s3_object" "blackbox_targets" {
+  bucket = aws_s3_bucket.prometheus_config.id
+  key    = "prometheus/blackbox-targets.json"
+
+  content = file("${path.module}/blackbox-targets.json")
+
+  content_type           = "application/json"
+  server_side_encryption = "AES256"
+
+  tags = local.common_tags
+}
+
+resource "aws_s3_object" "route_inventory" {
+  bucket = aws_s3_bucket.prometheus_config.id
+  key    = "prometheus/route-inventory.json"
+
+  content = file("${path.module}/route-inventory.json")
+
+  content_type           = "application/json"
+  server_side_encryption = "AES256"
+
+  tags = local.common_tags
 }

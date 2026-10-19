@@ -266,3 +266,13 @@ variable "prometheus_domain" {
     error_message = "prometheus_domain must not be empty."
   }
 }
+
+variable "backend_domain" {
+  description = "Public HTTPS hostname for the NeonLens backend API."
+  type        = string
+
+  validation {
+    condition     = length(trimspace(var.backend_domain)) > 0
+    error_message = "backend_domain must not be empty."
+  }
+}

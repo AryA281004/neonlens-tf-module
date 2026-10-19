@@ -52,3 +52,81 @@ scrape_configs:
 
       - target_label: service
         replacement: backend
+
+    # Public end-to-end API health check through DNS, TLS, ALB and backend
+  - job_name: neonlens-public-health
+    metrics_path: /probe
+
+    params:
+      module: [http_2xx]
+
+    static_configs:
+      - targets:
+          - https://${backend_domain}/health
+
+    relabel_configs:
+      # The requested public URL becomes the Blackbox probe target.
+      - source_labels: [__address__]
+        target_label: __param_target
+
+      # Scrape the existing private Blackbox Exporter sidecar.
+      - target_label: __address__
+        replacement: backend.neonlens.internal:9115
+
+      - source_labels: [__param_target]
+        target_label: instance
+
+      - target_label: service
+        replacement: backend
+
+      - target_label: probe_type
+        replacement: public-health
+
+    # Curated public API routes loaded from the S3-backed target file
+  - job_name: neonlens-public-api-routes
+    metrics_path: /probe
+
+    params:
+      module: [http_2xx]
+
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/blackbox-targets.json
+        refresh_interval: 60s
+
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+
+      - target_label: __address__
+        replacement: backend.neonlens.internal:9115
+
+      - source_labels: [__param_target]
+        target_label: instance
+
+      - target_label: service
+        replacement: backend
+
+      - target_label: probe_type
+        replacement: public-route
+
+   # Routes from route-inventory.json
+  - job_name: neonlens-route-inventory
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/route-inventory.json
+        refresh_interval: 30s
+
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+
+      - source_labels: [__param_target]
+        target_label: instance
+
+      - target_label: __address__
+        replacement: backend.neonlens.internal:9115
