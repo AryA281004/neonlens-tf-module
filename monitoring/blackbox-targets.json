@@ -1,0 +1,35 @@
+[
+  {
+    "targets": [
+      "https://dev-api.aryandudhat.qd.je/health"
+    ],
+    "labels": {
+      "environment": "dev",
+      "route": "/health",
+      "method": "GET",
+      "probe_type": "dependency_health"
+    }
+  },
+  {
+    "targets": [
+      "https://pre-api.aryandudhat.qd.je/health"
+    ],
+    "labels": {
+      "environment": "pre",
+      "route": "/health",
+      "method": "GET",
+      "probe_type": "dependency_health"
+    }
+  },
+  {
+    "targets": [
+      "https://api.aryandudhat.qd.je/health"
+    ],
+    "labels": {
+      "environment": "prod",
+      "route": "/health",
+      "method": "GET",
+      "probe_type": "dependency_health"
+    }
+  }
+]
