@@ -10,11 +10,6 @@ output "atlas_peering_id" {
 }
 
 
-output "atlas_container_id" {
-  description = "MongoDB Atlas network peering container ID."
-  value       = local.matching_atlas_containers
-}
-
 
 output "atlas_vpc_cidr" {
   description = "MongoDB Atlas VPC CIDR block."
