@@ -36,7 +36,7 @@ variable "instance_type" {
 }
 
 variable "root_volume_size" {
-  description = "EC2 root volume size in GiB."
+  description = "EC2 root volume size in GiB..."
   type        = number
   default     = 20
 }
