@@ -1,0 +1,270 @@
+#!/bin/bash
+set -Eeuo pipefail
+
+exec > >(tee -a /var/log/mongodb-bootstrap.log | logger -t mongodb-bootstrap -s 2>/dev/console) 2>&1
+
+# -------------------------------------------------------------------
+# Configuration supplied by Terraform
+# -------------------------------------------------------------------
+
+AWS_REGION="${aws_region}"
+SECRET_ARN="${secret_arn}"
+DATABASE_NAME="${database_name}"
+DATA_VOLUME_ID="${data_volume_id}"
+ENVIRONMENT="${environment}"
+
+MOUNT_POINT="/var/lib/mongodb"
+MONGODB_CONFIG="/etc/mongod.conf"
+
+echo "Starting MongoDB bootstrap for environment: ${ENVIRONMENT}"
+
+export DEBIAN_FRONTEND=noninteractive
+
+# -------------------------------------------------------------------
+# 1. Install operating-system dependencies
+# -------------------------------------------------------------------
+
+apt-get update
+
+apt-get install -y \
+  awscli \
+  ca-certificates \
+  curl \
+  gnupg \
+  jq \
+  nvme-cli \
+  openssl \
+  xfsprogs
+
+# -------------------------------------------------------------------
+# 2. Retrieve MongoDB credentials from Secrets Manager
+# -------------------------------------------------------------------
+
+echo "Retrieving MongoDB credentials..."
+
+SECRET_JSON=""
+
+for attempt in $(seq 1 30); do
+  if SECRET_JSON="$(aws secretsmanager get-secret-value \
+    --region "${AWS_REGION}" \
+    --secret-id "${SECRET_ARN}" \
+    --query SecretString \
+    --output text 2>/dev/null)"; then
+    break
+  fi
+
+  echo "Secrets Manager not ready. Retry ${attempt}/30..."
+  sleep 10
+done
+
+if [[ -z "${SECRET_JSON}" ]]; then
+  echo "ERROR: Could not retrieve MongoDB credentials."
+  exit 1
+fi
+
+MONGO_USERNAME="$(jq -er '.username' <<< "${SECRET_JSON}")"
+MONGO_PASSWORD="$(jq -er '.password' <<< "${SECRET_JSON}")"
+
+if [[ -z "${MONGO_USERNAME}" || -z "${MONGO_PASSWORD}" ]]; then
+  echo "ERROR: MongoDB credentials are missing."
+  exit 1
+fi
+
+unset SECRET_JSON
+
+# -------------------------------------------------------------------
+# 3. Locate and prepare the dedicated EBS data volume
+# -------------------------------------------------------------------
+
+echo "Waiting for EBS volume ${DATA_VOLUME_ID}..."
+
+VOLUME_ID_NORMALIZED="${DATA_VOLUME_ID//-/}"
+DEVICE=""
+
+for attempt in $(seq 1 60); do
+  for candidate in /dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_*; do
+    [[ -e "${candidate}" ]] || continue
+
+    if [[ "$(basename "${candidate}")" == *"${VOLUME_ID_NORMALIZED}"* ]]; then
+      DEVICE="$(readlink -f "${candidate}")"
+      break
+    fi
+  done
+
+  [[ -n "${DEVICE}" ]] && break
+
+  sleep 5
+done
+
+if [[ -z "${DEVICE}" ]]; then
+  echo "ERROR: Could not locate the attached EBS data volume."
+  lsblk
+  exit 1
+fi
+
+echo "Found MongoDB data device: ${DEVICE}"
+
+mkdir -p "${MOUNT_POINT}"
+
+# Format only a completely new, unformatted volume.
+if ! blkid "${DEVICE}" >/dev/null 2>&1; then
+  echo "Creating XFS filesystem on the new MongoDB volume..."
+  mkfs.xfs -f -L MONGODB_DATA "${DEVICE}"
+fi
+
+FILESYSTEM_UUID="$(blkid -s UUID -o value "${DEVICE}")"
+
+if [[ -z "${FILESYSTEM_UUID}" ]]; then
+  echo "ERROR: Could not determine the data volume filesystem UUID."
+  exit 1
+fi
+
+if ! grep -q "${FILESYSTEM_UUID}" /etc/fstab; then
+  echo "UUID=${FILESYSTEM_UUID} ${MOUNT_POINT} xfs defaults,nofail 0 2" >> /etc/fstab
+fi
+
+mount "${MOUNT_POINT}"
+
+# Prevent MongoDB from writing to the root filesystem if the data disk
+# is unexpectedly unavailable.
+if ! mountpoint -q "${MOUNT_POINT}"; then
+  echo "ERROR: MongoDB data volume is not mounted."
+  exit 1
+fi
+
+# -------------------------------------------------------------------
+# 4. Install MongoDB Community Edition 8.0
+# -------------------------------------------------------------------
+
+echo "Installing MongoDB Community Edition..."
+
+curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc \
+  | gpg --dearmor --yes -o /usr/share/keyrings/mongodb-server-8.0.gpg
+
+echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/8.0 multiverse" \
+  > /etc/apt/sources.list.d/mongodb-org-8.0.list
+
+apt-get update
+
+apt-get install -y mongodb-org
+
+# -------------------------------------------------------------------
+# 5. Configure the MongoDB data directory
+# -------------------------------------------------------------------
+
+mkdir -p "${MOUNT_POINT}"
+chown -R mongodb:mongodb "${MOUNT_POINT}"
+chmod 700 "${MOUNT_POINT}"
+
+# -------------------------------------------------------------------
+# 6. Configure MongoDB network binding and authentication
+# -------------------------------------------------------------------
+
+cat > "${MONGODB_CONFIG}" <<EOF
+storage:
+  dbPath: ${MOUNT_POINT}
+
+systemLog:
+  destination: file
+  logAppend: true
+  path: /var/log/mongodb/mongod.log
+
+net:
+  port: 27017
+  bindIp: 127.0.0.1,0.0.0.0
+
+processManagement:
+  timeZoneInfo: /usr/share/zoneinfo
+
+security:
+  authorization: enabled
+EOF
+
+chown mongodb:mongodb "${MONGODB_CONFIG}"
+chmod 640 "${MONGODB_CONFIG}"
+
+# -------------------------------------------------------------------
+# 7. Start MongoDB temporarily for initial administrator creation
+# -------------------------------------------------------------------
+
+systemctl enable mongod
+
+# Start without authentication only for initial local user creation.
+# MongoDB's localhost exception allows creation of the first user.
+systemctl start mongod
+
+for attempt in $(seq 1 30); do
+  if mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' \
+      | grep -q '1'; then
+    break
+  fi
+
+  sleep 2
+done
+
+# Create the administrator using environment variables rather than
+# interpolating credentials into the JavaScript source.
+export MONGO_BOOTSTRAP_USERNAME="${MONGO_USERNAME}"
+export MONGO_BOOTSTRAP_PASSWORD="${MONGO_PASSWORD}"
+
+mongosh --quiet admin --eval '
+const username = process.env.MONGO_BOOTSTRAP_USERNAME;
+const password = process.env.MONGO_BOOTSTRAP_PASSWORD;
+
+if (!username || !password) {
+  throw new Error("MongoDB bootstrap credentials are missing.");
+}
+
+db.createUser({
+  user: username,
+  pwd: password,
+  roles: [
+    { role: "root", db: "admin" }
+  ]
+});
+'
+
+unset MONGO_BOOTSTRAP_USERNAME
+unset MONGO_BOOTSTRAP_PASSWORD
+unset MONGO_USERNAME
+unset MONGO_PASSWORD
+
+# -------------------------------------------------------------------
+# 8. Restart MongoDB with authentication enabled
+# -------------------------------------------------------------------
+
+systemctl restart mongod
+
+for attempt in $(seq 1 30); do
+  if systemctl is-active --quiet mongod; then
+    break
+  fi
+
+  sleep 2
+done
+
+if ! systemctl is-active --quiet mongod; then
+  echo "ERROR: MongoDB failed to start."
+  systemctl status mongod --no-pager
+  exit 1
+fi
+
+# -------------------------------------------------------------------
+# 9. Verify MongoDB is running and the data volume is mounted
+# -------------------------------------------------------------------
+
+if ! mountpoint -q "${MOUNT_POINT}"; then
+  echo "ERROR: MongoDB data volume is not mounted."
+  exit 1
+fi
+
+if ! systemctl is-enabled --quiet mongod; then
+  echo "ERROR: MongoDB is not enabled at boot."
+  exit 1
+fi
+
+echo "MongoDB bootstrap completed successfully."
+echo "Environment: ${ENVIRONMENT}"
+echo "Database: ${DATABASE_NAME}"
+echo "Data directory: ${MOUNT_POINT}"
+echo "MongoDB port: 27017"                                            
