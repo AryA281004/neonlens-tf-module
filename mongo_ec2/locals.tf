@@ -18,7 +18,7 @@ locals {
     prod = "arn:aws:secretsmanager:us-east-1:666729139368:secret:neonlens/prod/mongodb/credentials-3mHU5C"
   }
 
-mongodb_secret_arn = local.mongodb_secret_arns[terraform.workspace]
+  mongodb_secret_arn = local.mongodb_secret_arns[terraform.workspace]
 
   common_tags = merge(var.tags, {
     Project     = var.project_name
