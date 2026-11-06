@@ -4,7 +4,7 @@ resource "aws_security_group" "mongodb" {
   vpc_id      = var.vpc_id
 
   ingress {
-    description     = "MongoDB access from the environment's ECS backend only."
+    description     = "MongoDB access from the environment ECS backend only."
     from_port       = 27017
     to_port         = 27017
     protocol        = "tcp"
